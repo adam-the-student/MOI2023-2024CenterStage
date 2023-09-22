@@ -43,6 +43,7 @@ public class SpikeDetectionThreeZone extends OpenCvPipeline {
 //    public static double threshold1 = 100;
 //    public static double threshold2 = 200;
 
+    int spikeZone = -1;
     private Point start = null;
     private Point end = null;
     public SpikeDetectionThreeZone() {
@@ -55,75 +56,62 @@ public class SpikeDetectionThreeZone extends OpenCvPipeline {
     public Mat processFrame(Mat input) {
         Mat mat = new Mat();
 
-
-
-        //mat turns into HSV value
+        // mat turns into HSV value
         Imgproc.cvtColor(input, mat, Imgproc.COLOR_RGB2HSV);
         if (mat.empty()) {
             return input;
         }
-        // converts RGB Frame to HSV
 
+        // Converts RGB Frame to HSV
         Scalar lowHSV = new Scalar(LowH, LowS, LowV);
-        Scalar higHSV = new Scalar(HighH, HighS, HighV);
+        Scalar highHSV = new Scalar(HighH, HighS, HighV);
 
-        Core.inRange(mat,lowHSV,higHSV,mat);
-// converts to black and white inrange
+        Core.inRange(mat, lowHSV, highHSV, mat);
 
-        Imgproc.morphologyEx(mat,mat,Imgproc.MORPH_OPEN,Imgproc.getStructuringElement(Imgproc.MORPH_RECT,new Size(10,10)));
+        Imgproc.morphologyEx(mat, mat, Imgproc.MORPH_OPEN, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(10, 10)));
 
         List<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
 
-        Imgproc.findContours(mat,contours,hierarchy,Imgproc.RETR_TREE,Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(mat, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
 
+        // Calculate the width of each zone
+        int imageWidth = input.width();
+        int zoneWidth = imageWidth / 3;
 
+        // Initialize variables to track which zone the spike is in
+        // -1 indicates no spike found in any zone
 
-        Imgproc.cvtColor(mat,mat,Imgproc.COLOR_GRAY2RGB);
-        Imgproc.drawContours(mat,contours,-1,new Scalar(255,255,0),2);
+        for (MatOfPoint contour : contours) {
+            Rect boundingRect = Imgproc.boundingRect(contour);
 
-        if (contours.size() > 0) {
-            MatOfPoint2f[] contoursPoly = new MatOfPoint2f[contours.size()];
-            Rect[] boundRect = new Rect[contours.size()];
-            for (int i = 0; i < contours.size(); i++) {
-                contoursPoly[i] = new MatOfPoint2f();
-                Imgproc.approxPolyDP(new MatOfPoint2f(contours.get(i).toArray()), contoursPoly[i], 3, true);
-                boundRect[i] = Imgproc.boundingRect(new MatOfPoint(contoursPoly[i].toArray()));
-                // draw red bounding rectangles on mat
-                // the mat has been converted to HSV so we need to use HSV as well
-                Imgproc.rectangle(mat, boundRect[i], new Scalar(0.5, 76.9, 89.8));
+            // Calculate the center of the bounding rectangle
+            Point center = new Point(boundingRect.x + boundingRect.width / 2, boundingRect.y + boundingRect.height / 2);
+
+            // Determine which zone the center of the bounding rectangle falls into
+            int zone = (int) (center.x / zoneWidth);
+
+            // Update the spikeZone if the contour is found in a zone
+            if (zone >= 0 && zone <= 2) {
+                spikeZone = zone;
             }
-
-            if (boundRect.length > 0)
-                for (Rect rect : boundRect) {
-                    if (rect.width > 10 && rect.height > 20) {
-                        lastValidBoundingRect = rect.clone();
-                    }
-                }
-
         }
 
-
-
-        if (lastValidBoundingRect != null) {
-            double fromSide = lastValidBoundingRect.x;
-            double Halfside = lastValidBoundingRect.y + lastValidBoundingRect.height/2;
-            Point start = new Point(fromSide, Halfside);
-            Point end = new Point(0,Halfside);
-            Imgproc.line(mat, start,end , new Scalar(255, 0, 255));
-            int width = lastValidBoundingRect.width;
+        // Send telemetry based on the spikeZone
+        if (telemetry != null) {
+            if (spikeZone == -1) {
+                telemetry.addData("Spike Zone", "No spike detected");
+            } else {
+                telemetry.addData("Spike Zone", "Zone " + spikeZone);
+            }
+            telemetry.update();
         }
-
 
         return mat;
     }
-    public double LENGTH(){
-        return (int) Core.norm(new MatOfPoint2f(start), new MatOfPoint2f(end));
+    public byte getspikeZone(){
+    return (byte)spikeZone;
     }
-    public double WIDTH(){
-        return lastValidBoundingRect.width;
-    }
-
 
 }
 
