@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.OpenCv.Pipelines;
+package org.firstinspires.ftc.teamcode.OCV;
 
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -19,7 +19,7 @@ import java.util.List;
 
 //for dashboard
 /*@Config*/
-public class StickDistancePipleine extends OpenCvPipeline {
+public class SpikeDetectionDistanceFromSide extends OpenCvPipeline {
     Telemetry telemetry;
     // rectangles
     public Rect lastValidBoundingRect;
@@ -27,11 +27,11 @@ public class StickDistancePipleine extends OpenCvPipeline {
     //backlog of frames to average out to reduce noise
     ArrayList<double[]> frameList;
     //these are public static to be tuned in dashboard
-    public static double LowH = 17;
-    public static double LowS = 178.5;
-    public static double LowV = 179.9;
-    public static double HighH = 21.3;
-    public static double HighS = 255;
+    public static double LowH = 0;
+    public static double LowS = 0;
+    public static double LowV = 152;
+    public static double HighH = 172;
+    public static double HighS = 62;
     public static double HighV = 255;
 
 //    public static double strictLowH = 0;
@@ -45,13 +45,13 @@ public class StickDistancePipleine extends OpenCvPipeline {
 
     private Point start = null;
     private Point end = null;
-    public StickDistancePipleine() {
+    public SpikeDetectionDistanceFromSide() {
         frameList = new ArrayList<>();
     }
 
 
 
-    public StickDistancePipleine(Telemetry t) {telemetry = t;}
+    public SpikeDetectionDistanceFromSide(Telemetry t) {telemetry = t;}
 
     @Override
     public Mat processFrame(Mat input) {
@@ -72,7 +72,7 @@ public class StickDistancePipleine extends OpenCvPipeline {
         Core.inRange(mat,lowHSV,higHSV,mat);
 // converts to black and white inrange
 
-        Imgproc.morphologyEx(mat,mat,Imgproc.MORPH_OPEN,Imgproc.getStructuringElement(Imgproc.MORPH_RECT,new Size(5,4)));
+        Imgproc.morphologyEx(mat,mat,Imgproc.MORPH_OPEN,Imgproc.getStructuringElement(Imgproc.MORPH_RECT,new Size(10,10)));
 
         List<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
